@@ -1,0 +1,259 @@
+#!/usr/bin/python3
+
+import json
+import time
+import os
+import sys
+import subprocess
+import urllib.request
+import logging
+from logging.handlers import RotatingFileHandler
+
+def main():
+    # logs (critical > error > warning > info > debug)
+    log = logging.getLogger()
+    log.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s  %(levelname)s  %(type)s  %(message)s')
+    # log file handler
+    fileHandler = RotatingFileHandler('logs.log', 'a', 10000000, 4)
+    fileHandler.setLevel(logging.DEBUG)
+    fileHandler.setFormatter(formatter)
+    log.addHandler(fileHandler)
+    # console handler
+    streamHandler = logging.StreamHandler()
+    streamHandler.setLevel(logging.INFO)
+    log.addHandler(streamHandler)
+
+    url = "https://torrentapi.org/pubapi_v2.php"
+    app_id = "trnt"
+    headers = {"user-agent": "trnt"}
+
+    if len(sys.argv) < 2:
+        print(doc())
+        sys.exit(1)
+
+    if sys.argv[1] == '-s':
+        try:
+            search_string = sys.argv[2]
+        except IndexError:
+            log.error("No search_string provided", extra={"type":"[APP]"})
+            sys.exit(1)
+        found = search_torrent(search_string, url, app_id, headers, log)
+        downloadOrStore(found, log)
+    elif sys.argv[1] == '-l':
+        showShoppingList()
+    elif sys.argv[1] == '-d':
+        try:
+            torrent_id = sys.argv[2]
+        except IndexError:
+            log.error("No torrent_id provided", extra={"type":"[APP]"})
+            sys.exit(1)
+        shopping_list = json.load(open('shopping_list.json'))
+        torrent_name = shopping_list[torrent_id]["name"]
+        magnet_link = shopping_list[torrent_id]["magnet"]
+        downloadTorrent(torrent_id, torrent_name, magnet_link, True, log)
+    elif sys.argv[1] == '-dl':
+        downloadList(log)
+    elif sys.argv[1] == '--clear':
+        emptyShoppingList(log)
+    elif sys.argv[1] == '-r':
+        try:
+            torrent_id = sys.argv[2]
+        except IndexError:
+            log.error("No torrent_id provided", extra={"type":"[APP]"})
+            sys.exit(1)
+        removeTorrentFromList(torrent_id, log)
+    elif sys.argv[1] == '--magnet':
+        try:
+            magnet_link = sys.argv[2]
+        except IndexError:
+            log.error("No magnet_link provided", extra={"type":"[APP]"})
+            sys.exit(1)
+        downloadTorrent("from magnet",magnet_link,True, log)
+    elif sys.argv[1] == '--logs':
+        showLogs()
+    elif sys.argv[1] == '--help' or sys.argv[1] == '-h':
+        print(doc())
+    else:
+        print("ERROR : {0} is not a valid argument".format(sys.argv[1]))
+        print(doc())
+
+def doc():
+    doc = """
+    USAGE:
+
+    torrent.py [-s search_string] [-l] [-d torrent_id] [-dl] [-remove torrent_id] [--clear] [--magnet magnet_link] [--logs]
+
+    DESCRIPTION:
+
+    -s search_string      Search torrentapi.org for search_string
+    -l                    List torrents in shopping list (shopping_list.json)
+    -d torrent_id         Download torrent with torrent_id
+    -dl                   Download aLl torrents in shopping list
+    -r torrent_id         Remove torrent_id from shopping list
+    --clear               empty shopping list
+    --magnet magnet_link  download torrent with magnet_link
+    --logs                show logs
+    """
+
+    return doc
+
+def showLogs():
+    with open('logs.log') as logs:
+        print(logs.read())
+
+def get_token(url, app_id, headers):
+    fullUrl = url + '?app_id=' + app_id + '&get_token=get_token'
+    r = urllib.request.Request(fullUrl, headers=headers)
+    with urllib.request.urlopen(r) as rep:
+        token = json.loads(rep.read().decode('utf-8'))
+        return token["token"]
+
+def search_torrent(search_string, url, app_id, headers, log):
+    found = {}
+
+    try:
+        token = get_token(url, app_id, headers)
+    except Exception as e:
+        log.error('Error getting token', extra={"type":"[APP]"})
+        log.error(e, extra={"type":"[APP]"})
+        sys.exit(1)
+    else:
+        log.debug("Got token %s", token, extra={"type":"[APP]"})
+        time.sleep(2)
+
+        payload = {"app_id":app_id,"token":token,"mode":"search",
+            "search_string":search_string,"sort":"seeders"}
+
+        fullUrl = '{0}?app_id={1}&token={2}&mode=search&search_string={3}&sort=seeders'.format(
+            url, app_id, token, search_string
+        )
+        log.debug(search_string, extra={"type":"[SEARCH]"})
+        r = urllib.request.Request(fullUrl, headers=headers)
+        with urllib.request.urlopen(r) as rep:
+            results = json.loads(rep.read().decode('utf-8'))
+            if "error_code" in results:
+                log.error("error_code: %s", results["error_code"], extra={"type":"[SEARCH]"})
+                log.error("error: %s", results["error"], extra={"type":"[SEARCH]"})
+                sys.exit(1)
+
+            torrents = results["torrent_results"]
+
+            for e in torrents:
+                torrentInfos = []
+
+                index = torrents.index(e)
+                filename = e["filename"]
+                magnet_link = e["download"]
+
+                torrentInfos.append(filename)
+                torrentInfos.append(magnet_link)
+
+                found[index] = torrentInfos
+
+        return found
+
+def downloadOrStore(found, log):
+    for key, value in found.items():
+        print("{0} : {1}".format(key,value[0]))
+
+    choice = input('download/store/quit ? (d [index], s [index], q) ')
+
+    try:
+        if choice[0] == "d" or choice[0] == "s":
+            try:
+                action = choice.split(" ")[0]
+                index = int(choice.split(" ")[1])
+            except:
+                log.error('choice: invalid input', extra={"type":"[APP]"})
+                downloadOrStore(found)
+            else:
+                try:
+                    torrent_name = found[index][0]
+                    magnet_link = found[index][1]
+                except KeyError:
+                    log.error("Invalid input: index %s does not exist", index, extra={"type":"[APP]"})
+                    downloadOrStore(found)
+                else:
+                    if action == "d":
+                        downloadTorrent(9999, torrent_name, magnet_link, True, log)
+                    elif action == "s":
+                        addTorrentToList(torrent_name,magnet_link, log)
+        elif choice[0] == "q":
+            sys.exit(0)
+        else:
+            log.error('choice: invalid input', extra={"type":"[APP]"})
+            downloadOrStore(found)
+    except IndexError:
+        log.error('choice: invalid input', extra={"type":"[APP]"})
+        downloadOrStore(found)
+
+def addTorrentToList(torrent_name,magnet_link, log):
+    with open(sys.path[0] + '/shopping_list.json') as json_list:
+        shopping_list = json.load(json_list)
+        if len(shopping_list) == 0:
+            key = 0
+        else:
+            key = int(max(list(shopping_list.keys()))) + 1
+        timestp = int(time.time())
+        shopping_list[key] = {"name": torrent_name, "magnet": magnet_link, "added": timestp}
+        with open(sys.path[0] + '/shopping_list.json', 'w') as outFile:
+            json.dump(shopping_list, outFile)
+            log.info('%s added to shopping list', torrent_name, extra={"type":"[SHOPPING LIST]"})
+
+def showShoppingList():
+    with open(sys.path[0] + '/shopping_list.json') as json_list:
+        shopping_list = json.load(json_list)
+        for key, value in sorted(shopping_list.items()):
+            print(key, value["name"])
+
+def emptyShoppingList(log):
+    with open(sys.path[0] + '/shopping_list.json') as json_list:
+        shopping_list = json.load(json_list)
+        shopping_list.clear()
+        with open(sys.path[0] + '/shopping_list.json', 'w') as outFile:
+            json.dump(shopping_list, outFile)
+            log.info('shopping list cleared', extra={"type":"[SHOPPING LIST]"})
+
+def downloadTorrent(torrent_id,torrent_name,magnet_link,stopWhenEnded, log):
+    try:
+        log.info(torrent_name, extra={"type":"[DOWNLOAD]"})
+        log.info(magnet_link, extra={"type":"[DOWNLOAD]"})
+        print("Starting download %s" % torrent_name)
+        if stopWhenEnded:
+            stopScriptPath = sys.path[0] + '/' + 'stop_transmission.sh'
+            subprocess.call(["transmission-cli","-f",stopScriptPath,magnet_link])
+        else:
+            subprocess.call(["transmission-cli",magnet_link])
+        removeTorrentFromList(torrent_id, log)
+    except Exception as e:
+        log.error(e, extra={"tyep":"[APP]"})
+        sys.exit(1)
+
+def removeTorrentFromList(torrent_id, log):
+    with open(sys.path[0] + '/shopping_list.json') as json_list:
+        shopping_list = json.load(json_list)
+        try:
+            name = shopping_list[torrent_id]["name"]
+            log.info('%s removed from shopping list', name, extra={"type":"[SHOPPING LIST]"})
+            del shopping_list[torrent_id]
+        except KeyError as e:
+            log.error('torrent_id %s does not exist in shopping_list', torrent_id, extra={"type":"[APP]"})
+
+        with open(sys.path[0] + '/shopping_list.json', 'w') as outFile:
+            json.dump(shopping_list, outFile)
+
+def downloadList(log):
+    with open(sys.path[0] + '/shopping_list.json') as json_list:
+        shopping_list = json.load(json_list)
+        log.info('Starting download shopping list ...', extra={"type":"[SHOPPING LIST]"})
+        for key, value in shopping_list.items():
+            downloadTorrent(key, value["name"], value["magnet"], False, log)
+        log.info('All items in shopping list downloaded', extra={"type":"[SHOPPING LIST]"})
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("KeyboardInterrupt")
+        sys.exit(1)
