@@ -4,12 +4,12 @@ Python CLI for managing torrents using transmission-cli and torrentapi.org
 
 ## Prerequisites
 
-Python 3.x
+Python 3.x 
 [transmission-cli](https://doc.ubuntu-fr.org/transmission#transmission-cli)
 
 ## Installing
 
-`git clone https://github.com/nicoprl/trnt.git`
+`git clone https://github.com/nicoprl/trnt.git` 
 Add the directory to your PATH
 
 ## Usage
@@ -41,4 +41,4 @@ List all torrents in the shopping list
 
 Download all stored torrents
 
-`trnt -dl'
+`trnt -dl`
