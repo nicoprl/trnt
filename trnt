@@ -69,7 +69,7 @@ def main():
         except IndexError:
             log.error("No magnet_link provided", extra={"type":"[APP]"})
             sys.exit(1)
-        downloadTorrent("from magnet",magnet_link,True, log)
+        downloadTorrent(9999, magnet_link, True, log)
     elif sys.argv[1] == '--logs':
         showLogs()
     elif sys.argv[1] == '--help' or sys.argv[1] == '-h':
@@ -225,7 +225,8 @@ def downloadTorrent(torrent_id,torrent_name,magnet_link,stopWhenEnded, log):
             subprocess.call(["transmission-cli","-f",stopScriptPath,magnet_link])
         else:
             subprocess.call(["transmission-cli",magnet_link])
-        removeTorrentFromList(torrent_id, log)
+        if torrent_id != 9999:
+            removeTorrentFromList(torrent_id, log)
     except Exception as e:
         log.error(e, extra={"tyep":"[APP]"})
         sys.exit(1)
