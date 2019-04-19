@@ -225,7 +225,7 @@ def downloadTorrent(torrent_id,torrent_name,magnet_link,stopWhenEnded, log):
         if torrent_id != 9999:
             removeTorrentFromList(torrent_id, log)
     except Exception as e:
-        log.error(e, extra={"tyep":"[APP]"})
+        log.error(e, extra={"type":"[APP]"})
         sys.exit(1)
 
 def removeTorrentFromList(torrent_id, log):
