@@ -16,7 +16,7 @@ Add the directory to your PATH
 ```
 USAGE:
 
-torrent.py [-s search_string] [-l] [-d torrent_id] [-dl] [-remove torrent_id] [--clear] [--magnet magnet_link] [--logs]
+trnt [-s search_string] [-l] [-d torrent_id] [-dl] [-remove torrent_id] [--clear] [--magnet magnet_link] [--logs]
 
 DESCRIPTION:
 

@@ -69,7 +69,7 @@ def main():
         except IndexError:
             log.error("No magnet_link provided", extra={"type":"[APP]"})
             sys.exit(1)
-        downloadTorrent(9999, magnet_link, True, log)
+        downloadTorrent(9999, '', magnet_link, True, log)
     elif sys.argv[1] == '--logs':
         showLogs()
     elif sys.argv[1] == '--help' or sys.argv[1] == '-h':
@@ -82,7 +82,7 @@ def doc():
     doc = """
     USAGE:
 
-    torrent.py [-s search_string] [-l] [-d torrent_id] [-dl] [-remove torrent_id] [--clear] [--magnet magnet_link] [--logs]
+    trnt [-s search_string] [-l] [-d torrent_id] [-dl] [-remove torrent_id] [--clear] [--magnet magnet_link] [--logs]
 
     DESCRIPTION:
 
@@ -121,9 +121,6 @@ def search_torrent(search_string, url, app_id, headers, log):
     else:
         log.debug("Got token %s", token, extra={"type":"[APP]"})
         time.sleep(2)
-
-        payload = {"app_id":app_id,"token":token,"mode":"search",
-            "search_string":search_string,"sort":"seeders"}
 
         fullUrl = '{0}?app_id={1}&token={2}&mode=search&search_string={3}&sort=seeders'.format(
             url, app_id, token, search_string
@@ -166,14 +163,14 @@ def downloadOrStore(found, log):
                 index = int(choice.split(" ")[1])
             except:
                 log.error('choice: invalid input', extra={"type":"[APP]"})
-                downloadOrStore(found)
+                downloadOrStore(found, log)
             else:
                 try:
                     torrent_name = found[index][0]
                     magnet_link = found[index][1]
                 except KeyError:
                     log.error("Invalid input: index %s does not exist", index, extra={"type":"[APP]"})
-                    downloadOrStore(found)
+                    downloadOrStore(found, log)
                 else:
                     if action == "d":
                         downloadTorrent(9999, torrent_name, magnet_link, True, log)
@@ -183,10 +180,10 @@ def downloadOrStore(found, log):
             sys.exit(0)
         else:
             log.error('choice: invalid input', extra={"type":"[APP]"})
-            downloadOrStore(found)
+            downloadOrStore(found, log)
     except IndexError:
         log.error('choice: invalid input', extra={"type":"[APP]"})
-        downloadOrStore(found)
+        downloadOrStore(found, log)
 
 def addTorrentToList(torrent_name,magnet_link, log):
     with open(sys.path[0] + '/shopping_list.json') as json_list:
@@ -240,6 +237,7 @@ def removeTorrentFromList(torrent_id, log):
             del shopping_list[torrent_id]
         except KeyError as e:
             log.error('torrent_id %s does not exist in shopping_list', torrent_id, extra={"type":"[APP]"})
+            log.error(e)
 
         with open(sys.path[0] + '/shopping_list.json', 'w') as outFile:
             json.dump(shopping_list, outFile)
