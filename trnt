@@ -49,7 +49,7 @@ def main():
         except IndexError:
             log.error("No torrent_id provided", extra={"type": "[APP]"})
             sys.exit(1)
-        shopping_list = json.load(open(sys.path[0] + "shopping_list.json"))
+        shopping_list = json.load(open(sys.path[0] + "/shopping_list.json"))
         torrent_name = shopping_list[torrent_id]["name"]
         magnet_link = shopping_list[torrent_id]["magnet"]
         downloadTorrent(torrent_id, torrent_name, magnet_link, True, log)
