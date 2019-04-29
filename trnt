@@ -16,7 +16,7 @@ def main():
     log.setLevel(logging.DEBUG)
     formatter = logging.Formatter("%(asctime)s  %(levelname)s  %(type)s  %(message)s")
     # log file handler
-    fileHandler = RotatingFileHandler("logs.log", "a", 10000000, 4)
+    fileHandler = RotatingFileHandler(sys.path[0] + "/logs.log", "a", 10000000, 4)
     fileHandler.setLevel(logging.DEBUG)
     fileHandler.setFormatter(formatter)
     log.addHandler(fileHandler)
