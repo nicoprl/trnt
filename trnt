@@ -102,7 +102,7 @@ def doc():
 
 
 def showLogs():
-    with open("logs.log") as logs:
+    with open(sys.path[0] + "/logs.log") as logs:
         print(logs.read())
 
 
