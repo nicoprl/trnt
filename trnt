@@ -4,6 +4,7 @@ import json
 import time
 import os
 import sys
+import argparse
 import subprocess
 import urllib.request
 import logging
@@ -25,27 +26,39 @@ def main():
     streamHandler.setLevel(logging.INFO)
     log.addHandler(streamHandler)
 
-    url = "https://torrentapi.org/pubapi_v2.php"
-    app_id = "trnt"
-    headers = {"user-agent": "trnt"}
+    # argparse
+    parser = argparse.ArgumentParser(description='')
+    parser.add_argument('-s', required=False, metavar='search string', help='Search torrentapi.org for search_string')
+    parser.add_argument('-l', required=False, action="store_true", help='List torrents in shopping list (shopping_list.json)')
+    parser.add_argument('-d', required=False, metavar='torrentID', help='Download torrent with torrent id')
+    parser.add_argument('-dl', required=False, action="store_true", help='Download aLl torrents in shopping list')
+    parser.add_argument('-r', required=False, metavar='torrentID', help='Remove torrent_id from shopping list')
+    parser.add_argument('--clear', required=False, action="store_true", help='empty shopping list')
+    parser.add_argument('--magnet', required=False, metavar='magnetlink', help='download torrent with magnet link')
+    parser.add_argument('--logs', required=False, action="store_true", help='show logs')
+    args = parser.parse_args()
+
+    URL = "https://torrentapi.org/pubapi_v2.php"
+    APP_ID = "trnt"
+    HEADERS = {"user-agent": "trnt"}
 
     if len(sys.argv) < 2:
-        print(doc())
+        parser.print_help()
         sys.exit(1)
 
-    if sys.argv[1] == "-s":
+    if args.s is not None:
         try:
-            search_string = sys.argv[2]
+            search_string = args.s
         except IndexError:
             log.error("No search_string provided", extra={"type": "[APP]"})
             sys.exit(1)
-        found = search_torrent(search_string, url, app_id, headers, log)
+        found = search_torrent(search_string, URL, APP_ID, HEADERS, log)
         downloadOrStore(found, log)
-    elif sys.argv[1] == "-l":
+    elif args.l:
         showShoppingList()
-    elif sys.argv[1] == "-d":
+    elif args.d is not None:
         try:
-            torrent_id = sys.argv[2]
+            torrent_id = args.d
         except IndexError:
             log.error("No torrent_id provided", extra={"type": "[APP]"})
             sys.exit(1)
@@ -53,31 +66,18 @@ def main():
         torrent_name = shopping_list[torrent_id]["name"]
         magnet_link = shopping_list[torrent_id]["magnet"]
         downloadTorrent(torrent_id, torrent_name, magnet_link, True, log)
-    elif sys.argv[1] == "-dl":
+    elif args.dl:
         downloadList(log)
-    elif sys.argv[1] == "--clear":
+    elif args.clear:
         emptyShoppingList(log)
-    elif sys.argv[1] == "-r":
-        try:
-            torrent_id = sys.argv[2]
-        except IndexError:
-            log.error("No torrent_id provided", extra={"type": "[APP]"})
-            sys.exit(1)
+    elif args.r is not None:
+        torrent_id = args.r
         removeTorrentFromList(torrent_id, log)
-    elif sys.argv[1] == "--magnet":
-        try:
-            magnet_link = sys.argv[2]
-        except IndexError:
-            log.error("No magnet_link provided", extra={"type": "[APP]"})
-            sys.exit(1)
+    elif args.magnet is not None:
+        magnet_link = args.magnet
         downloadTorrent(9999, "", magnet_link, True, log)
-    elif sys.argv[1] == "--logs":
+    elif args.logs:
         showLogs()
-    elif sys.argv[1] == "--help" or sys.argv[1] == "-h":
-        print(doc())
-    else:
-        print("ERROR : {0} is not a valid argument".format(sys.argv[1]))
-        print(doc())
 
 
 def doc():
