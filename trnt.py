@@ -10,22 +10,22 @@ import urllib.request
 import logging
 from logging.handlers import RotatingFileHandler
 
+# logs (critical > error > warning > info > debug)
+log = logging.getLogger()
+log.setLevel(logging.DEBUG)
+formatter = logging.Formatter("%(asctime)s  %(levelname)s  %(type)s  %(message)s")
+# log file handler
+fileHandler = RotatingFileHandler(sys.path[0] + "/logs.log", "a", 10000000, 4)
+fileHandler.setLevel(logging.DEBUG)
+fileHandler.setFormatter(formatter)
+log.addHandler(fileHandler)
+# console handler
+streamHandler = logging.StreamHandler()
+streamHandler.setLevel(logging.INFO)
+log.addHandler(streamHandler)
+
 
 def main():
-    # logs (critical > error > warning > info > debug)
-    log = logging.getLogger()
-    log.setLevel(logging.DEBUG)
-    formatter = logging.Formatter("%(asctime)s  %(levelname)s  %(type)s  %(message)s")
-    # log file handler
-    fileHandler = RotatingFileHandler(sys.path[0] + "/logs.log", "a", 10000000, 4)
-    fileHandler.setLevel(logging.DEBUG)
-    fileHandler.setFormatter(formatter)
-    log.addHandler(fileHandler)
-    # console handler
-    streamHandler = logging.StreamHandler()
-    streamHandler.setLevel(logging.INFO)
-    log.addHandler(streamHandler)
-
     # argparse
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('-s', required=False, metavar='search string', help='Search torrentapi.org for search_string')
