@@ -125,7 +125,6 @@ def search_torrent(search_string, url, app_id, headers, log):
         sys.exit(1)
     else:
         log.debug("Got token %s", token, extra={"type": "[APP]"})
-        time.sleep(2)
 
         fullUrl = "{0}?app_id={1}&token={2}&mode=search&search_string={3}&sort=seeders".format(
             url, app_id, token, search_string
