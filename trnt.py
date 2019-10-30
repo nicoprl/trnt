@@ -125,34 +125,42 @@ def search_torrent(search_string, url, app_id, headers, log):
         sys.exit(1)
     else:
         log.debug("Got token %s", token, extra={"type": "[APP]"})
+        time.sleep(0.5)
 
         fullUrl = "{0}?app_id={1}&token={2}&mode=search&search_string={3}&sort=seeders".format(
             url, app_id, token, search_string
         )
         log.debug(search_string, extra={"type": "[SEARCH]"})
-        r = urllib.request.Request(fullUrl, headers=headers)
-        with urllib.request.urlopen(r) as rep:
-            results = json.loads(rep.read().decode("utf-8"))
-            if "error_code" in results:
-                log.error(
-                    "error_code: %s", results["error_code"], extra={"type": "[SEARCH]"}
-                )
-                log.error("error: %s", results["error"], extra={"type": "[SEARCH]"})
-                sys.exit(1)
+        try:
+            r = urllib.request.Request(fullUrl, headers=headers)
+            with urllib.request.urlopen(r) as rep:
+                results = json.loads(rep.read().decode("utf-8"))
+                if "error_code" in results:
+                    log.error(
+                        "error_code: %s", results["error_code"], extra={"type": "[SEARCH]"}
+                    )
+                    log.error("error: %s", results["error"], extra={"type": "[SEARCH]"})
+                    sys.exit(1)
 
-            torrents = results["torrent_results"]
+                torrents = results["torrent_results"]
 
-            for e in torrents:
-                torrentInfos = []
+                for e in torrents:
+                    torrentInfos = []
 
-                index = torrents.index(e)
-                filename = e["filename"]
-                magnet_link = e["download"]
+                    index = torrents.index(e)
+                    filename = e["filename"]
+                    magnet_link = e["download"]
 
-                torrentInfos.append(filename)
-                torrentInfos.append(magnet_link)
+                    torrentInfos.append(filename)
+                    torrentInfos.append(magnet_link)
 
-                found[index] = torrentInfos
+                    found[index] = torrentInfos
+        except HTTPError as err_http:
+            log.error(err_http, extra={"type": "[APP]"})
+            sys.exit(1)
+        except Exception as err_http_gen:
+            log.error(err_http_gen, extra={"type": "[APP]"})
+            sys.exit(1)
 
         return found
 
