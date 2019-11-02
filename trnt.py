@@ -155,7 +155,7 @@ def search_torrent(search_string, url, app_id, headers, log):
                     torrentInfos.append(magnet_link)
 
                     found[index] = torrentInfos
-        except HTTPError as err_http:
+        except urllib.error.HTTPError as err_http:
             log.error(err_http, extra={"type": "[APP]"})
             sys.exit(1)
         except Exception as err_http_gen:
