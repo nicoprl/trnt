@@ -2,11 +2,6 @@
 
 from trnt import *
 
-def test_doc():
-    r = doc()
-    assert type(r) is str
-    assert len(r) > 0
-
 def test_get_token():
     tkn = get_token(
         "https://torrentapi.org/pubapi_v2.php", 

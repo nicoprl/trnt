@@ -2,7 +2,6 @@
 
 import json
 import time
-import os
 import sys
 import argparse
 import subprocess
@@ -10,12 +9,17 @@ import urllib.request
 import logging
 from logging.handlers import RotatingFileHandler
 
+if sys.path[0] == "":
+    trnt_path = "."
+else:
+    trnt_path = sys.path[0]
+
 # logs (critical > error > warning > info > debug)
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
 formatter = logging.Formatter("%(asctime)s  %(levelname)s  %(type)s  %(message)s")
 # log file handler
-fileHandler = RotatingFileHandler(sys.path[0] + "/logs.log", "a", 10000000, 4)
+fileHandler = RotatingFileHandler(trnt_path + "/trnt_logs.log", "a", 10000000, 4)
 fileHandler.setLevel(logging.DEBUG)
 fileHandler.setFormatter(formatter)
 log.addHandler(fileHandler)
@@ -62,7 +66,7 @@ def main():
         except IndexError:
             log.error("No torrent_id provided", extra={"type": "[APP]"})
             sys.exit(1)
-        shopping_list = json.load(open(sys.path[0] + "/shopping_list.json"))
+        shopping_list = json.load(open(trnt_path + "/shopping_list.json"))
         torrent_name = shopping_list[torrent_id]["name"]
         magnet_link = shopping_list[torrent_id]["magnet"]
         downloadTorrent(torrent_id, torrent_name, magnet_link, True, log)
@@ -80,29 +84,8 @@ def main():
         showLogs()
 
 
-def doc():
-    doc = """
-    USAGE:
-
-    trnt [-s search_string] [-l] [-d torrent_id] [-dl] [-remove torrent_id] [--clear] [--magnet magnet_link] [--logs]
-
-    DESCRIPTION:
-
-    -s search_string      Search torrentapi.org for search_string
-    -l                    List torrents in shopping list (shopping_list.json)
-    -d torrent_id         Download torrent with torrent_id
-    -dl                   Download aLl torrents in shopping list
-    -r torrent_id         Remove torrent_id from shopping list
-    --clear               empty shopping list
-    --magnet magnet_link  download torrent with magnet_link
-    --logs                show logs
-    """
-
-    return doc
-
-
 def showLogs():
-    with open(sys.path[0] + "/logs.log") as logs:
+    with open(trnt_path + "/trnt_logs.log") as logs:
         print(logs.read())
 
 
@@ -206,7 +189,7 @@ def downloadOrStore(found, log):
 
 
 def addTorrentToList(torrent_name, magnet_link, log):
-    with open(sys.path[0] + "/shopping_list.json") as json_list:
+    with open(trnt_path + "/shopping_list.json") as json_list:
         shopping_list = json.load(json_list)
         if len(shopping_list) == 0:
             key = 0
@@ -218,7 +201,7 @@ def addTorrentToList(torrent_name, magnet_link, log):
             "magnet": magnet_link,
             "added": timestp,
         }
-        with open(sys.path[0] + "/shopping_list.json", "w") as outFile:
+        with open(trnt_path + "/shopping_list.json", "w") as outFile:
             json.dump(shopping_list, outFile)
             log.info(
                 "%s added to shopping list",
@@ -228,17 +211,17 @@ def addTorrentToList(torrent_name, magnet_link, log):
 
 
 def showShoppingList():
-    with open(sys.path[0] + "/shopping_list.json") as json_list:
+    with open(trnt_path + "/shopping_list.json") as json_list:
         shopping_list = json.load(json_list)
         for key, value in sorted(shopping_list.items()):
             print(key, value["name"])
 
 
 def emptyShoppingList(log):
-    with open(sys.path[0] + "/shopping_list.json") as json_list:
+    with open(trnt_path + "/shopping_list.json") as json_list:
         shopping_list = json.load(json_list)
         shopping_list.clear()
-        with open(sys.path[0] + "/shopping_list.json", "w") as outFile:
+        with open(trnt_path + "/shopping_list.json", "w") as outFile:
             json.dump(shopping_list, outFile)
             log.info("shopping list cleared", extra={"type": "[SHOPPING LIST]"})
 
@@ -249,7 +232,7 @@ def downloadTorrent(torrent_id, torrent_name, magnet_link, stopWhenEnded, log):
         log.info(magnet_link, extra={"type": "[DOWNLOAD]"})
         print("Starting download %s" % torrent_name)
         if stopWhenEnded:
-            stopScriptPath = sys.path[0] + "/" + "stop_transmission.sh"
+            stopScriptPath = trnt_path + "/" + "stop_transmission.sh"
             subprocess.call(["transmission-cli", "-f", stopScriptPath, magnet_link])
         else:
             subprocess.call(["transmission-cli", magnet_link])
@@ -261,7 +244,7 @@ def downloadTorrent(torrent_id, torrent_name, magnet_link, stopWhenEnded, log):
 
 
 def removeTorrentFromList(torrent_id, log):
-    with open(sys.path[0] + "/shopping_list.json") as json_list:
+    with open(trnt_path + "/shopping_list.json") as json_list:
         shopping_list = json.load(json_list)
         try:
             name = shopping_list[torrent_id]["name"]
@@ -276,13 +259,18 @@ def removeTorrentFromList(torrent_id, log):
                 extra={"type": "[APP]"},
             )
             log.error(e)
-
-        with open(sys.path[0] + "/shopping_list.json", "w") as outFile:
+        except Exception as e:
+            log.error(
+                "removeTorrentFromList() error: %s",
+                e,
+                extra={"type": "[APP]"}
+            )
+        with open(trnt_path + "/shopping_list.json", "w") as outFile:
             json.dump(shopping_list, outFile)
 
 
 def downloadList(log):
-    with open(sys.path[0] + "/shopping_list.json") as json_list:
+    with open(trnt_path + "/shopping_list.json") as json_list:
         shopping_list = json.load(json_list)
         log.info(
             "Starting download shopping list ...", extra={"type": "[SHOPPING LIST]"}
@@ -292,6 +280,7 @@ def downloadList(log):
         log.info(
             "All items in shopping list downloaded", extra={"type": "[SHOPPING LIST]"}
         )
+        subprocess.run(trnt_path + "/" + "stop_transmission.sh")
 
 
 if __name__ == "__main__":
