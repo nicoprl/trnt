@@ -276,7 +276,7 @@ def downloadList(log):
             "Starting download shopping list ...", extra={"type": "[SHOPPING LIST]"}
         )
         for key, value in shopping_list.items():
-            downloadTorrent(key, value["name"], value["magnet"], False, log)
+            downloadTorrent(key, value["name"], value["magnet"], True, log)
         log.info(
             "All items in shopping list downloaded", extra={"type": "[SHOPPING LIST]"}
         )
