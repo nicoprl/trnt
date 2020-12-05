@@ -7,6 +7,8 @@ import argparse
 import subprocess
 import urllib.request
 import logging
+from typing import Dict, List
+from random import uniform
 from logging.handlers import RotatingFileHandler
 
 if sys.path[0] == "":
@@ -56,8 +58,18 @@ def main():
         except IndexError:
             log.error("No search_string provided", extra={"type": "[APP]"})
             sys.exit(1)
-        found = search_torrent(search_string, URL, APP_ID, HEADERS, log)
-        downloadOrStore(found, log)
+        i = 0
+        found_ok = False
+        while i <=3 and found_ok is False:
+            found = search_torrent(search_string, URL, APP_ID, HEADERS, log)
+            found_ok = bool(found)
+            if not found_ok:
+                time.sleep(uniform(2.0, 3.0))
+            i += 1
+        if found_ok:
+            downloadOrStore(found, log)
+        else:
+            log.error("Nothing found after 4 attempts", extra={"type": "[APP]"})
     elif args.l:
         showShoppingList()
     elif args.d is not None:
@@ -97,7 +109,7 @@ def get_token(url, app_id, headers):
         return token["token"]
 
 
-def search_torrent(search_string, url, app_id, headers, log):
+def search_torrent(search_string, url, app_id, headers, log) -> Dict[int,List]:
     found = {}
 
     try:
@@ -123,7 +135,7 @@ def search_torrent(search_string, url, app_id, headers, log):
                         "error_code: %s", results["error_code"], extra={"type": "[SEARCH]"}
                     )
                     log.error("error: %s", results["error"], extra={"type": "[SEARCH]"})
-                    sys.exit(1)
+                    return {}
 
                 torrents = results["torrent_results"]
 
